@@ -9,22 +9,24 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
 public class MoneyTrackerApp extends Application {
     private double balance = 0.0;
     private Label balanceValueLabel;
+
     private TextField expenseTextField;
     private TextField incomeTextField;
     private PieChart pieChart;
-    private ChoiceBox<ChoiseCategory> expenseCategoryChoiceBox; // Добавляем ChoiceBox для выбора категории расходов
-
+    private ChoiceBox<ChoiseCategory> expenseCategoryChoiceBox;
     private ChoiseCategory selectedCategory;
 
     private Map<ChoiseCategory, Double> categoryBalances = new HashMap<>();
 
+    public MoneyTrackerApp() {
+        balanceValueLabel = new Label(Double.toString(balance));
+    }
 
     public static void main(String[] args) {
         launch(args);
@@ -43,9 +45,7 @@ public class MoneyTrackerApp extends Application {
         categoryBalances.put(ChoiseCategory.INVESTMENTS, 0.0);
         categoryBalances.put(ChoiseCategory.OTHERS, 0.0);
 
-
         Label balanceLabel = new Label("Баланс: ");
-        balanceValueLabel = new Label(Double.toString(balance));
 
         pieChart = new PieChart();
         pieChart.setPrefSize(300, 300);
@@ -53,15 +53,12 @@ public class MoneyTrackerApp extends Application {
         expenseTextField = new TextField();
         incomeTextField = new TextField();
 
-        // Создаем ChoiceBox для выбора категории расходов
         expenseCategoryChoiceBox = new ChoiceBox<ChoiseCategory>();
         expenseCategoryChoiceBox.getItems().addAll(ChoiseCategory.values());
         expenseCategoryChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             selectedCategory = newValue;
             expenseCategoryChoiceBox.setValue(selectedCategory);
-            System.out.println(selectedCategory);
         });
-
 
         Button expenseButton = new Button("Списать");
         Button incomeButton = new Button("Добавить");
@@ -76,7 +73,7 @@ public class MoneyTrackerApp extends Application {
                     balance -= expense;
                     balanceValueLabel.setText(Double.toString(balance));
                     expenseTextField.clear();
-                    updatePieChart(selectedCategory, balance);
+                    updatePieChart();
                 } else {
                     showAlert("Ошибка", "Введите корректную сумму расхода.");
                 }
@@ -89,13 +86,10 @@ public class MoneyTrackerApp extends Application {
             try {
                 double income = Double.parseDouble(incomeTextField.getText());
                 if (income > 0) {
-                    double currentBalance = categoryBalances.get(selectedCategory);
-                    categoryBalances.put(selectedCategory, currentBalance + income);
-
                     balance += income;
                     balanceValueLabel.setText(Double.toString(balance));
                     incomeTextField.clear();
-                    updatePieChart(selectedCategory, balance);
+                    updatePieChart();
                 } else {
                     showAlert("Ошибка", "Введите корректную сумму.");
                 }
@@ -103,7 +97,6 @@ public class MoneyTrackerApp extends Application {
                 showAlert("Ошибка", "Введите корректную сумму.");
             }
         });
-
 
         VBox root = new VBox(10);
         root.setPadding(new Insets(20));
@@ -122,14 +115,18 @@ public class MoneyTrackerApp extends Application {
         alert.showAndWait();
     }
 
-    private void updatePieChart(ChoiseCategory choiseCategory, double balance) {
+    private void updatePieChart() {
         pieChart.getData().clear();
+        double totalBalance = categoryBalances.values().stream().mapToDouble(Double::doubleValue).sum();
 
-        // Перебираем все категории и добавляем их в диаграмму
         for (ChoiseCategory category : categoryBalances.keySet()) {
             double categoryBalance = categoryBalances.get(category);
-            pieChart.getData().add(new PieChart.Data(category.toString(), categoryBalance));
+            double percentage = (categoryBalance / totalBalance) * 100;
+            PieChart.Data data = new PieChart.Data(category.toString() + " (" + String.format("%.2f", percentage) + "%)", categoryBalance);
+            data.nameProperty().addListener((observable, oldValue, newValue) -> {
+                data.setName(newValue);
+            });
+            pieChart.getData().add(data);
         }
     }
 }
-
